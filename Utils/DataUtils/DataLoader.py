@@ -31,6 +31,7 @@ class Dataloder(keras.utils.Sequence):
         # transpose list of lists
         batch = [np.stack(samples, axis=0) for samples in zip(*data)]
         batch[0] = np.reshape(batch[0], [-1, batch[0][0].shape[0], batch[0][0].shape[0], 1])
+        batch[0] = batch[0].astype('float32')
         return batch
 
     def __len__(self):

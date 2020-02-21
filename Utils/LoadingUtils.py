@@ -3,7 +3,7 @@ import numpy as np
 
 
 def read_img(imfile):
-    return cv2.imread(imfile)[:, :, ::-1]
+    return cv2.imread(imfile, -1)
 
 
 def read_boxes(txtfile):

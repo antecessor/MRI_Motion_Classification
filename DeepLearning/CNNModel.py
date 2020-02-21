@@ -29,9 +29,7 @@ def lstmTrain(DataLoaderTrain, DataLoaderTest, num_classes):
     model.compile(loss=keras.losses.categorical_crossentropy, optimizer='nadam',
                   metrics=[metrics.Recall()])
     print(model.summary())
-
-    batch_size = 128
-    epochs = 200
+    epochs = 50
 
     model.fit(DataLoaderTrain,
               epochs=epochs, validation_data=DataLoaderTest)

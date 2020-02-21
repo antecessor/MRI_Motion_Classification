@@ -1,4 +1,3 @@
-import cv2
 import numpy as np
 from sklearn.model_selection import train_test_split
 
@@ -36,7 +35,7 @@ class Dataset:
             image, label = getImageAndClasses(self.train_filter[i])
         else:
             image, label = getImageAndClasses(self.test_filter[i])
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        # image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
         # apply augmentations
         if self.augmentation:

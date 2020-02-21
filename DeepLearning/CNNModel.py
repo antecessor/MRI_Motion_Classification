@@ -4,7 +4,7 @@ from keras.models import Sequential
 from tensorflow import keras
 
 
-def lstmTrain(DataLoaderTrain, DataLoaderTest, num_classes):
+def CNNTrain(DataLoaderTrain, DataLoaderTest, num_classes):
     input_shape = (256, 256, 1)
     model = Sequential()
 

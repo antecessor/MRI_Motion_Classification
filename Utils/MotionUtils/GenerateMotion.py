@@ -6,7 +6,8 @@ import os
 import nibabel as nib
 import numpy as np
 
-from Utils.ImageTransform import ImageTransformer
+from Utils.MotionUtils.ImageTransform import ImageTransformer
+from Utils.kspace.CartesianSampler import CartesianSampler
 
 baseDir = "E:/Workspaces/PhillipsProject/Data/"
 t1Path = baseDir + "T1/"
@@ -39,24 +40,34 @@ def euler2mat(euler):
     return mat
 
 
+def linearNormalization(values):
+    return (values - np.min(values)) / (np.max(values) - np.min(values))
+
+
 def generateMotion(img, voxelRes, maxDisplacementInMillimeter, maxRotInDegree):
     voxelRes = np.asarray(voxelRes)
     maxDisplacementInMillimeter = np.asarray(maxDisplacementInMillimeter)
     maxRotInDegree = np.asarray(maxRotInDegree)
 
-    fft3Result = np.fft.fftn(img, axes=(1, 2))
-    nT = fft3Result.shape[1]
+    nT = img.shape[1]
 
     maxDisplacementInPixel = np.floor(maxDisplacementInMillimeter / voxelRes)
+    displacementPixelTrajectory = np.zeros((3, nT))
+    rotationDegreeTrajectory = np.zeros((3, nT))
+    for i in range(3):
+        randomMovement = maxDisplacementInPixel[i] * linearNormalization(generate_perlin_noise_2d((1, nT), [1, 32]))
+        displacementPixelTrajectory[i, :] = np.round(randomMovement)
+        randomRotation = maxRotInDegree[i] * linearNormalization(generate_perlin_noise_2d((1, nT), [1, 32]))
+        rotationDegreeTrajectory[i, :] = np.round(randomRotation)
 
-    displacementPixelTrajectory = np.round(maxDisplacementInPixel * generate_perlin_noise_2d((3, nT), [1, 25]))
-    rotationDegreeTrajectory = np.round(maxRotInDegree * generate_perlin_noise_2d((3, nT), [1, 25]))
-
+    kspaceSampler = CartesianSampler(img.shape, axes=(0, 2))
     imageTransform = ImageTransformer(img)
     for time in range(nT):
-        rotatedImage = imageTransform.rotate_along_axis(rotationDegreeTrajectory[nT, 0], [nT, 1], [nT, 2], displacementPixelTrajectory[nT, 0], displacementPixelTrajectory[nT, 1],
-                                                        displacementPixelTrajectory[nT, 2])
+        rotatedImage = imageTransform.rotate_along_axis(rotationDegreeTrajectory[0, time], rotationDegreeTrajectory[1, time], rotationDegreeTrajectory[2, time]
+                                                        , displacementPixelTrajectory[0, time], displacementPixelTrajectory[1, time], displacementPixelTrajectory[2, time])
+        kspaceSampler.sample(rotatedImage, time)
         imageTransform = ImageTransformer(rotatedImage)
+    distortedImageWithMotion = kspaceSampler.getImageAfterSampling()
 
     pass
 

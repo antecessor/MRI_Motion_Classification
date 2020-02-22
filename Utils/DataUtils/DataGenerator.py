@@ -3,7 +3,7 @@ import os
 import cv2
 import numpy as np
 
-from Utils.LoadingUtils import readImage
+from Utils.DataUtils.LoadingUtils import readImage
 
 baseDir = "E:/Workspaces/PhillipsProject/Data"
 T2W_15T = baseDir + "/T2_1.5T/"

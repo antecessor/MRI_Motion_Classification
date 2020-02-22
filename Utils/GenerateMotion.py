@@ -5,7 +5,8 @@ import os
 
 import nibabel as nib
 import numpy as np
-from noise import pnoise1
+
+from Utils.ImageTransform import ImageTransformer
 
 baseDir = "E:/Workspaces/PhillipsProject/Data/"
 t1Path = baseDir + "T1/"
@@ -38,33 +39,24 @@ def euler2mat(euler):
     return mat
 
 
-def generateMotion(img, maxDisp, maxRot):
+def generateMotion(img, voxelRes, maxDisplacementInMillimeter, maxRotInDegree):
+    voxelRes = np.asarray(voxelRes)
+    maxDisplacementInMillimeter = np.asarray(maxDisplacementInMillimeter)
+    maxRotInDegree = np.asarray(maxRotInDegree)
+
     fft3Result = np.fft.fftn(img, axes=(1, 2))
     nT = fft3Result.shape[1]
 
-    swallowFrequency = 2  # number of swallowing events in scan
-    swallowMagnitude = [2, 2]  # first is translations, second is rotations
-    suddenFrequency = 2  # number of sudden movements
-    suddenMagnitude = [2, 2]  # first is translations, second is rotations
+    maxDisplacementInPixel = np.floor(maxDisplacementInMillimeter / voxelRes)
 
-    fitpars = np.zeros((6, nT))
-    fitpars[0, :] = maxDisp * pnoise1(nT)
-    fitpars[1, :] = maxDisp * pnoise1(nT)
-    fitpars[2, :] = maxDisp * pnoise1(nT)
-    fitpars[3, :] = maxRot * pnoise1(nT)
-    fitpars[4, :] = maxRot * pnoise1(nT)
-    fitpars[5, :] = maxRot * pnoise1(nT)
+    displacementPixelTrajectory = np.round(maxDisplacementInPixel * generate_perlin_noise_2d((3, nT), [1, 25]))
+    rotationDegreeTrajectory = np.round(maxRotInDegree * generate_perlin_noise_2d((3, nT), [1, 25]))
 
-    # add swallowing movement in z-axis
-    swallowTraceBase = np.exp(-np.linspace(0, 1e2, nT))
-    swallowTrace = np.zeros((1, nT))
-    for iS in range(swallowFrequency):
-        swallowTrace = swallowTrace + np.roll(swallowTraceBase, np.random.randint(0, nT, 1))
-    fitpars[2, :] = fitpars[2, :] + swallowMagnitude[0] * swallowTrace
-    fitpars[3, :] = fitpars[3, :] + swallowMagnitude[1] * swallowTrace
-
-    fitMats = euler2mat(fitpars[3:6, :])
-    # fitMats[0:3, 3, :] = fitpars[0: 3, :]
+    imageTransform = ImageTransformer(img)
+    for time in range(nT):
+        rotatedImage = imageTransform.rotate_along_axis(rotationDegreeTrajectory[nT, 0], [nT, 1], [nT, 2], displacementPixelTrajectory[nT, 0], displacementPixelTrajectory[nT, 1],
+                                                        displacementPixelTrajectory[nT, 2])
+        imageTransform = ImageTransformer(rotatedImage)
 
     pass
 
@@ -99,5 +91,5 @@ for imageName in t1Images:
     imgStructure = nib.load(t1Path + imageName)
     voxelSize = imgStructure.header["pixdim"]
     data = imgStructure.get_fdata()
-    generateMotion(data, 1.2, 1.4)
+    generateMotion(data, voxelSize[1:4], [1.2, 1.5, 1.4], [10, 20, 30])
     pass

@@ -1,6 +1,4 @@
-import cv2
 import numpy as np
-
 
 # Usage:
 #     Change main function with ideal arguments
@@ -23,6 +21,8 @@ import numpy as np
 # Reference:
 #     1.        : http://stackoverflow.com/questions/17087446/how-to-calculate-perspective-transform-for-opencv-from-rotation-angles
 #     2.        : http://jepsonsblog.blogspot.tw/2012/11/rotation-in-3d-using-opencvs.html
+from scipy import ndimage
+
 
 def get_rad(theta, phi, gamma):
     return (deg_to_rad(theta),
@@ -59,9 +59,7 @@ class ImageTransformer(object):
         # Get projection matrix
         mat = self.get_M(rtheta, rphi, rgamma, dx, dy, dz)
 
-        return cv2.warpPerspective(self.image.copy(), mat, (self.width, self.height))
-
-    """ Get Perspective Projection Matrix """
+        return ndimage.affine_transform(self.image, mat[0:3, 0:3], mat[0:3, 3], output_shape=self.image.shape, order=3)
 
     def get_M(self, theta, phi, gamma, dx, dy, dz):
         w = self.width
@@ -69,10 +67,10 @@ class ImageTransformer(object):
         f = self.focal
 
         # Projection 2D -> 3D matrix
-        A1 = np.array([[1, 0, -w / 2],
-                       [0, 1, -h / 2],
-                       [0, 0, 1],
-                       [0, 0, 1]])
+        # A1 = np.array([[1, 0, -w / 2],
+        #                [0, 1, -h / 2],
+        #                [0, 0, 1],
+        #                [0, 0, 1]])
 
         # Rotation matrices around the X, Y, and Z axis
         RX = np.array([[1, 0, 0, 0],
@@ -100,9 +98,9 @@ class ImageTransformer(object):
                       [0, 0, 0, 1]])
 
         # Projection 3D -> 2D matrix
-        A2 = np.array([[f, 0, w / 2, 0],
-                       [0, f, h / 2, 0],
-                       [0, 0, 1, 0]])
+        # A2 = np.array([[f, 0, w / 2, 0],
+        #                [0, f, h / 2, 0],
+        #                [0, 0, 1, 0]])
 
         # Final transformation matrix
-        return np.dot(A2, np.dot(T, np.dot(R, A1)))
+        return np.dot(T, R)

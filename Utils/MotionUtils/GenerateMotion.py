@@ -31,7 +31,7 @@ def saveSlice(slice, rotationDegreeTrajectory, displacementPixelTrajectory, suff
     displacementVal = np.linalg.norm(displacementPixelTrajectory)
     normalizedImg = np.asarray(np.round(linearNormalization(slice) * 255), dtype=np.uint8)
     im = Image.fromarray(normalizedImg)
-    imageName = "{0}{1}_{2}_{3}.tiff".format(genDir, displacementVal, rotationVal, suffix)
+    imageName = "{0}{1}_{2}_{3}.tiff".format(genDir, round(displacementVal, 2), round(rotationVal, 2), suffix)
     im.save(imageName)
 
 
@@ -83,7 +83,7 @@ def generateMotion(img, voxelRes, maxDisplacementInMillimeter, maxRotInDegree, p
     for time in range(int(nT / 3), nT - int(nT / 3), 1):
         slices = [kspaceSampler.getSlice(time), kspaceSamplerBeforeMovement.getSlice(time)]
         showSlice(slices)
-        saveSlice(slices[0], rotationDegreeTrajectory[:, time], displacementPixelTrajectory[:, time], imageNameSuffix)
+        saveSlice(slices[0], rotationDegreeTrajectory[:, time], displacementPixelTrajectory[:, time], imageNameSuffix.replace(".nii.gz", "_" + str(time)))
 
 
 def generate_perlin_noise_2d(shape, res):
@@ -116,5 +116,10 @@ for imageName in t1Images:
     imgStructure = nib.load(t1Path + imageName)
     voxelSize = imgStructure.header["pixdim"]
     data = imgStructure.get_fdata()
-    generateMotion(data, voxelSize[1:4], maxDisplacementInMillimeter=[1.5, 1.5, 1.5], maxRotInDegree=[3, 1, 2], primaryAxis=0, imageNameSuffix=imageName)
-    pass
+    generateMotion(data, voxelSize[1:4], maxDisplacementInMillimeter=[3, 3, 3], maxRotInDegree=[3, 3, 3], primaryAxis=2, imageNameSuffix=imageName)
+
+for imageName in t2Images:
+    imgStructure = nib.load(t2Path + imageName)
+    voxelSize = imgStructure.header["pixdim"]
+    data = imgStructure.get_fdata()
+    generateMotion(data, voxelSize[1:4], maxDisplacementInMillimeter=[3, 3, 3], maxRotInDegree=[3, 3, 3], primaryAxis=2, imageNameSuffix=imageName)

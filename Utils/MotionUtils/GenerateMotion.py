@@ -3,54 +3,87 @@
 # Institute of Psychiatry using a GE 1.5T system
 import os
 
+import matplotlib.pyplot as plt
 import nibabel as nib
 import numpy as np
+from PIL import Image
 
 from Utils.MotionUtils.ImageTransform import ImageTransformer
 from Utils.kspace.CartesianSampler import CartesianSampler
 
 baseDir = "E:/Workspaces/PhillipsProject/Data/"
+genDir = "E:/Workspaces/PhillipsProject/Data/generated/"
 t1Path = baseDir + "T1/"
 t1Images = os.listdir(t1Path)
 t2Path = baseDir + "T2/"
 t2Images = os.listdir(t2Path)
 
+fig, axes = plt.subplots(1, 2)
+
+
+def showSlice(slices):
+    for index, slice in enumerate(slices):
+        axes[index].imshow(slice, cmap="gray", origin="lower")
+
+
+def saveSlice(slice, rotationDegreeTrajectory, displacementPixelTrajectory, suffix=''):
+    rotationVal = np.linalg.norm(rotationDegreeTrajectory)
+    displacementVal = np.linalg.norm(displacementPixelTrajectory)
+    normalizedImg = np.asarray(np.round(linearNormalization(slice) * 255), dtype=np.uint8)
+    im = Image.fromarray(normalizedImg)
+    imageName = "{0}{1}_{2}_{3}.tiff".format(genDir, displacementVal, rotationVal, suffix)
+    im.save(imageName)
 
 
 def linearNormalization(values):
     return (values - np.min(values)) / (np.max(values) - np.min(values))
 
 
-def linearNormalization(values):
-    return (values - np.min(values)) / (np.max(values) - np.min(values))
+def findANumberWithMod0(primaryNum):
+    firstNum = int(primaryNum / 2)
+    while firstNum > 2:
+        if primaryNum % firstNum == 0:
+            return firstNum
 
 
-def generateMotion(img, voxelRes, maxDisplacementInMillimeter, maxRotInDegree):
+def generateMotion(img, voxelRes, maxDisplacementInMillimeter, maxRotInDegree, primaryAxis=2, imageNameSuffix=''):
     voxelRes = np.asarray(voxelRes)
     maxDisplacementInMillimeter = np.asarray(maxDisplacementInMillimeter)
     maxRotInDegree = np.asarray(maxRotInDegree)
 
-    nT = img.shape[1]
+    nT = img.shape[primaryAxis]
+    axes = (1, 2)
+    if primaryAxis == 0:
+        axes = (1, 2)
+    elif primaryAxis == 1:
+        axes = (0, 2)
+    elif primaryAxis == 2:
+        axes = (0, 1)
 
     maxDisplacementInPixel = np.floor(maxDisplacementInMillimeter / voxelRes)
     displacementPixelTrajectory = np.zeros((3, nT))
     rotationDegreeTrajectory = np.zeros((3, nT))
     for i in range(3):
-        randomMovement = maxDisplacementInPixel[i] * linearNormalization(generate_perlin_noise_2d((1, nT), [1, 32]))
+        randomMovement = maxDisplacementInPixel[i] * linearNormalization(generate_perlin_noise_2d((1, nT), [1, findANumberWithMod0(nT)]))
         displacementPixelTrajectory[i, :] = np.round(randomMovement)
-        randomRotation = maxRotInDegree[i] * linearNormalization(generate_perlin_noise_2d((1, nT), [1, 32]))
+        randomRotation = maxRotInDegree[i] * linearNormalization(generate_perlin_noise_2d((1, nT), [1, findANumberWithMod0(nT)]))
         rotationDegreeTrajectory[i, :] = np.round(randomRotation)
 
-    kspaceSampler = CartesianSampler(img.shape, axes=(0, 2))
+    kspaceSampler = CartesianSampler(img.shape, axes=axes)
+    kspaceSamplerBeforeMovement = CartesianSampler(img.shape, axes=axes)
+    kspaceSamplerBeforeMovement.distortedImage = img
+
     imageTransform = ImageTransformer(img)
     for time in range(nT):
         rotatedImage = imageTransform.rotate_along_axis(rotationDegreeTrajectory[0, time], rotationDegreeTrajectory[1, time], rotationDegreeTrajectory[2, time]
                                                         , displacementPixelTrajectory[0, time], displacementPixelTrajectory[1, time], displacementPixelTrajectory[2, time])
         kspaceSampler.sample(rotatedImage, time)
         imageTransform = ImageTransformer(rotatedImage)
-    distortedImageWithMotion = kspaceSampler.getImageAfterSampling()
-
-    pass
+    kspaceSampler.calculateImageAfterSampling()
+    for time in range(int(nT / 3), nT - int(nT / 3), 1):
+        slices = [kspaceSampler.getSlice(time), kspaceSamplerBeforeMovement.getSlice(time)]
+        showSlice(slices)
+        saveSlice(slices[0], rotationDegreeTrajectory[:, time], displacementPixelTrajectory[:, time], imageNameSuffix)
 
 
 def generate_perlin_noise_2d(shape, res):
@@ -83,5 +116,5 @@ for imageName in t1Images:
     imgStructure = nib.load(t1Path + imageName)
     voxelSize = imgStructure.header["pixdim"]
     data = imgStructure.get_fdata()
-    generateMotion(data, voxelSize[1:4], maxDisplacementInMillimeter=[1.5, 1.5, 1.5], maxRotInDegree=[10, 20, 30])
+    generateMotion(data, voxelSize[1:4], maxDisplacementInMillimeter=[1.5, 1.5, 1.5], maxRotInDegree=[3, 1, 2], primaryAxis=0, imageNameSuffix=imageName)
     pass

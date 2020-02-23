@@ -70,20 +70,21 @@ def generateMotion(img, voxelRes, maxDisplacementInMillimeter, maxRotInDegree, p
         rotationDegreeTrajectory[i, :] = np.round(randomRotation)
 
     kspaceSampler = CartesianSampler(img.shape, axes=axes)
-    kspaceSamplerBeforeMovement = CartesianSampler(img.shape, axes=axes)
-    kspaceSamplerBeforeMovement.distortedImage = img
+    kspaceSamplerWithoutMovement = CartesianSampler(img.shape, axes=axes)
+    kspaceSamplerWithoutMovement.distortedImage = img
 
     imageTransform = ImageTransformer(img)
     for time in range(nT):
         rotatedImage = imageTransform.rotate_along_axis(rotationDegreeTrajectory[0, time], rotationDegreeTrajectory[1, time], rotationDegreeTrajectory[2, time]
                                                         , displacementPixelTrajectory[0, time], displacementPixelTrajectory[1, time], displacementPixelTrajectory[2, time])
         kspaceSampler.sample(rotatedImage, time)
-        imageTransform = ImageTransformer(rotatedImage)
+        imageTransform = ImageTransformer(img)
     kspaceSampler.calculateImageAfterSampling()
     for time in range(int(nT / 3), nT - int(nT / 3), 1):
-        slices = [kspaceSampler.getSlice(time), kspaceSamplerBeforeMovement.getSlice(time)]
-        showSlice(slices)
+        slices = [kspaceSampler.getSlice(time), kspaceSamplerWithoutMovement.getSlice(time)]
+        # showSlice(slices)
         saveSlice(slices[0], rotationDegreeTrajectory[:, time], displacementPixelTrajectory[:, time], imageNameSuffix.replace(".nii.gz", "_" + str(time)))
+        saveSlice(slices[1], [0, 0, 0], [0, 0, 0], imageNameSuffix.replace(".nii.gz", "_" + str(time)))
 
 
 def generate_perlin_noise_2d(shape, res):
@@ -112,14 +113,15 @@ def generate_perlin_noise_2d(shape, res):
     return np.sqrt(2) * ((1 - t[:, :, 1]) * n0 + t[:, :, 1] * n1)
 
 
-for imageName in t1Images:
-    imgStructure = nib.load(t1Path + imageName)
-    voxelSize = imgStructure.header["pixdim"]
-    data = imgStructure.get_fdata()
-    generateMotion(data, voxelSize[1:4], maxDisplacementInMillimeter=[3, 3, 3], maxRotInDegree=[3, 3, 3], primaryAxis=2, imageNameSuffix=imageName)
+# for imageName in t1Images:
+#     imgStructure = nib.load(t1Path + imageName)
+#     voxelSize = imgStructure.header["pixdim"]
+#     data = imgStructure.get_fdata()
+#     generateMotion(data, voxelSize[1:4], maxDisplacementInMillimeter=[3, 3, 3], maxRotInDegree=[3, 3, 3], primaryAxis=2, imageNameSuffix=imageName)
 
 for imageName in t2Images:
     imgStructure = nib.load(t2Path + imageName)
     voxelSize = imgStructure.header["pixdim"]
     data = imgStructure.get_fdata()
-    generateMotion(data, voxelSize[1:4], maxDisplacementInMillimeter=[3, 3, 3], maxRotInDegree=[3, 3, 3], primaryAxis=2, imageNameSuffix=imageName)
+    print("image : {} is processing".format(imageName))
+    generateMotion(data, voxelSize[1:4], maxDisplacementInMillimeter=[3, 3, 3], maxRotInDegree=[3, 3, 3], primaryAxis=0, imageNameSuffix=imageName)

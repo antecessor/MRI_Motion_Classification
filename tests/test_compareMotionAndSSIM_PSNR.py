@@ -62,19 +62,19 @@ class TestCompareMotionWithSSIMPSNR(TestCase):
         dataFrame['image'] = imageMats
 
         X, Y, displacementNorm, rotationNorm = self.createPairImages(dataFrame)
-        information = pd.DataFrame(columns=["rotationNorm", "displacementNorm", "ssim", "psnr"])
+        information = pd.DataFrame(columns=["RMS of rotation", "RMS of displacement", "SSIM", "PSNR"])
         ssimValues = []
         psnrValues = []
         for index, image in enumerate(X):
             ssimValues.append(ssim(image, Y[index], data_range=image.max() - image.min()))
             psnrValues.append(peak_signal_noise_ratio(Y[index], image, data_range=image.max() - image.min()))
 
-        information["rotationNorm"] = np.asarray(rotationNorm, dtype=float)
-        information["displacementNorm"] = np.asarray(displacementNorm, dtype=float)
-        information["ssim"] = np.asarray(ssimValues, dtype=float)
-        information["psnr"] = np.asarray(psnrValues, dtype=float)
-        information["motionNorm"] = np.sqrt(np.power(np.asarray(rotationNorm), 2) + np.power(np.asarray(displacementNorm), 2))
+        information["RMS of rotation"] = np.asarray(rotationNorm, dtype=float)
+        information["RMS of displacement"] = np.asarray(displacementNorm, dtype=float)
+        information["SSIM"] = np.asarray(ssimValues, dtype=float)
+        information["PSNR"] = np.asarray(psnrValues, dtype=float)
+        information["|Motion|"] = np.sqrt(np.power(np.asarray(rotationNorm), 2) + np.power(np.asarray(displacementNorm), 2))
         DA = DataAnalysisUtils()
-        DA.plotCorrelationHeatMap(information)
+        # DA.plotCorrelationHeatMap(information)
         DA.plotScatterAllFeatures(information)
         pass

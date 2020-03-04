@@ -41,7 +41,7 @@ class TestGANForMotionDetection(TestCase):
             params = image.split("_")
             displacementNorm = float(params[0])
             rotationNorm = float(params[1])
-            motionValue.append(displacementNorm + rotationNorm)
+            motionValue.append(np.sqrt(np.power(displacementNorm, 2) + np.power(rotationNorm, 2)))
             names.append(params[2])
             numbers.append(params[3])
             imageMats.append(imageMat)

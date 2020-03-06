@@ -5,13 +5,13 @@ import numpy as np
 
 from Utils.DataUtils.LoadingUtils import readImage
 
-baseDir = "E:/Workspaces/PhillipsProject/Data"
-T2W_15T = baseDir + "/T2_1.5T/"
-T2W_3T = baseDir + "/T2_3T/"
-T1W_15T = baseDir + "/T1_1.5T/"
-T1W_3T = baseDir + "/T1_3T/"
+baseDir = "E:/Workspaces/PhillipsProject/Data/generated/"
+T2W_15T = baseDir + "T2_1.5T/"
+T2W_3T = baseDir + "T2_3T/"
+T1W_15T = baseDir + "T1_1.5T/"
+T1W_3T = baseDir + "T1_3T/"
 
-selectedDataPath = T2W_15T
+selectedDataPath = baseDir
 
 motionSeverities = ["M0/", "M1/", "M2/", "M3/", "M4/"]
 imageNames = []

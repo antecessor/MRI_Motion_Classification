@@ -4,11 +4,23 @@ from unittest import TestCase
 import numpy as np
 import pandas as pd
 from PIL import Image
+from keract import keract, get_activations
+from keras.engine.saving import load_model
 
 from Utils.DataUtils.LoadingUtils import readImage
 
 
 class TestPrepareDataForTraining(TestCase):
+    def test_getActivationLayers(self):
+        model = load_model('motionClassificationModel.h5')
+        x = np.random.uniform(size=(256, 256))
+        activations = get_activations(model, x, auto_compile=True)
+        image1 = "E:\Workspaces\PhillipsProject\Data\generated\\2.45_2.45_IXI002-Guys-0828-T1_56.tiff"
+        image2 = "E:\Workspaces\PhillipsProject\Data\generated\\2.45_3.0_IXI012-HH-1211-T2_54"
+        mageMat1 = readImage(image1, show=False)
+        mageMat2 = readImage(image2, show=False)
+
+        keract.display_heatmaps(activations, mageMat1, save=False)
 
     def test_trainingGAN(self):
         baseDir = "E:\Workspaces\PhillipsProject\Data\generated/"

@@ -38,6 +38,7 @@ def getImageAndClasses(i, show=False):
 
     imageName = selectedDataPath + motionSeverities[selectedClass] + imageNames[selectedClass][i - wholeIndex[selectedClass]]
     image = readImage(imageName, show=False)
+    image = np.diff(image)
     image = cv2.resize(image, (256, 256))
 
     target = np.zeros((1, len(motionSeverities)))

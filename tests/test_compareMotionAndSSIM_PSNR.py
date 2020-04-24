@@ -2,6 +2,8 @@ import os
 from unittest import TestCase
 
 import cv2
+import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from skimage.metrics import structural_similarity as ssim, peak_signal_noise_ratio
@@ -34,6 +36,54 @@ class TestCompareMotionWithSSIMPSNR(TestCase):
                 displacementNorm.append(row[0])
                 t1t2.append(row[-1])
         return X, Y, displacementNorm, rotationNorm, t1t2
+
+    def test_jointHistogram(self):
+        baseDir = "E:\Workspaces\PhillipsProject\Data\generated/"
+        images = os.listdir(baseDir)
+
+        imageT1 = []
+        imageT2 = []
+        count = 1
+        for image in images:
+            if image.__contains__("T1"):
+                try:
+                    if count == 100:
+                        break
+                    count = count + 1
+                    imageMat = readImage(baseDir + image, show=False)
+                    imageMat = imageMat - imageMat[0, 0]
+                    cv2.normalize(imageMat, imageMat, 0, 255, cv2.NORM_MINMAX)
+                    cv2.resize(imageMat, (256, 256), imageMat)
+                    # imageMat = np.diff(imageMat)
+                    imageT1.extend(np.asarray(imageMat[:]).ravel())
+                except:
+                    pass
+        count = 1
+        for image in images:
+            if image.__contains__("T2"):
+                try:
+                    if count == 100:
+                        break
+                    count = count + 1
+                    imageMat = readImage(baseDir + image, show=False)
+                    # imageMat = imageMat - imageMat[0, 0]
+                    cv2.normalize(imageMat, imageMat, 0, 255, cv2.NORM_MINMAX)
+                    cv2.resize(imageMat, (256, 256), imageMat)
+                    # imageMat = np.diff(imageMat)
+                    imageT2.extend(np.asarray(imageMat[:]).ravel())
+                except:
+                    pass
+        fig2 = plt.figure()
+        imageT1 = np.asarray(imageT1)
+        imageT2 = np.asarray(imageT2)
+        plt.hist2d(imageT1[range(len(imageT2))], imageT2, bins=100, norm=mcolors.PowerNorm(.8), cmax=1000)
+        plt.xlabel('T1')
+        plt.ylabel('T2')
+        cbar = plt.colorbar()
+        plt.tight_layout()
+        cbar.ax.set_ylabel('Counts')
+        plt.savefig("jointHistT1T2.png")
+        pass
 
     def test_ImageQuality(self):
         baseDir = "E:\Workspaces\PhillipsProject\Data\generated/"

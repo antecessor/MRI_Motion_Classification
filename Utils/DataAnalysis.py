@@ -39,13 +39,19 @@ class DataAnalysisUtils:
 
     def plotPairAllFeatureByHue(self, dataFrame, hue):
         sns.pairplot(dataFrame, hue=hue)
+        mpl.savefig('relation.png')
 
     def plotJoint(self, dataFrame, columnX, columnY, size=6):
         sns.jointplot(x=columnX, y=columnY, data=dataFrame,
                       size=size, kind='kde', color='#800000', space=0)
 
     def plotScatterAllFeatures(self, dataFrame):
-        pd.plotting.scatter_matrix(dataFrame, figsize=(14, 14))
+        scatter_matrix = pd.plotting.scatter_matrix(dataFrame, figsize=(14, 14))
+        for ax in scatter_matrix.ravel():
+            ax.set_xlabel(ax.get_xlabel(), fontsize=15, rotation=0)
+            ax.set_ylabel(ax.get_ylabel(), fontsize=15, rotation=90)
+
+        mpl.savefig('relation.png')
         mpl.figure()
 
     def plotColumnVersusColumn(self, dataFrame, columnX, columnY, kind='scatter', color='red'):

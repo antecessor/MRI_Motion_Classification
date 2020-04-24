@@ -52,7 +52,7 @@ def generateMotion(img, voxelRes, maxDisplacementInMillimeter, maxRotInDegree, p
     maxRotInDegree = np.asarray(maxRotInDegree)
 
     nT = img.shape[primaryAxis]
-    axes = (1, 2)
+    axes = (0, 1)
     if primaryAxis == 0:
         axes = (1, 2)
     elif primaryAxis == 1:

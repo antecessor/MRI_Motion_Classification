@@ -1,7 +1,11 @@
+import os
+
 import cv2
 import keras
 import keras.backend as K
+import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 from tensorflow.python.framework import ops
 from tensorflow_core.python.keras.layers import Lambda
@@ -109,39 +113,86 @@ def grad_cam(input_model, image, category_index, layer_name):
     cam = np.maximum(cam, 0)
     heatmap = cam / np.max(cam)
 
-    # Return to BGR [0..255] from the preprocessed image
+    # # Return to BGR [0..255] from the preprocessed image
     image = image[0, :]
     image -= np.min(image)
     image = np.minimum(image, 255)
 
-    cam = cv2.applyColorMap(np.uint8(255 * heatmap), cv2.COLORMAP_JET)
+    cam = cv2.applyColorMap(np.uint8(255 * heatmap), cv2.COLORMAP_VIRIDIS)
     cam = np.float32(cam) + np.float32(image)
     cam = 255 * cam / np.max(cam)
     return np.uint8(cam), heatmap
 
 
-baseDir = "E:\Workspaces\PhillipsProject\Data\generated\\"
-image1 = baseDir + "M0\\0.tiff"
-image2 = baseDir + "M0\\163.tiff"
+def createPairImages(dataFrame):
+    X = []
+    Y = []
+    for index, row in dataFrame.iterrows():
+        if row[0] != 0:
+            name = row[1]
+            imageWithMotion = row[3]
+            number = row[2]
+            df1 = dataFrame[(dataFrame.motionNorm == 0) & (dataFrame.name == name) & (dataFrame.number == number)]
+            imageWithoutMotion = df1["image"].values[0]
+            if imageWithoutMotion.shape != (256, 256) or imageWithMotion.shape != (256, 256):
+                continue
+            X.append(imageWithMotion)
+            Y.append(imageWithoutMotion)
+    return X, Y
 
-image3 = baseDir + "M1\\4518.tiff"
 
-image4 = baseDir + "M2\\4391.tiff"
+def getImages():
+    baseDir = "E:\Workspaces\PhillipsProject\Data\generated/"
+    images = os.listdir(baseDir)
+    dataFrame = pd.DataFrame(columns=["motionNorm", "name", "number", "image"])
+    motionValue = []
+    names = []
+    numbers = []
+    imageMats = []
+    for image in images:
+        if str(image).__contains__(".tiff") and str(image).__contains__("T1"):
+            imageMat = readImage(baseDir + image, show=False)
 
-image5 = baseDir + "M3\\4297.tiff"
+            params = image.split("_")
+            displacementNorm = float(params[0])
+            rotationNorm = float(params[1])
+            motionValue.append(np.sqrt(np.power(displacementNorm, 2) + np.power(rotationNorm, 2)))
+            names.append(params[2])
+            numbers.append(params[3])
+            imageMats.append(imageMat)
+            print("load image {}".format(image))
+    dataFrame['motionNorm'] = motionValue
+    dataFrame['name'] = names
+    dataFrame['number'] = numbers
+    dataFrame['image'] = imageMats
 
-image6 = baseDir + "M4\\8059.tiff"
+    X, Y = createPairImages(dataFrame)
+    return X, Y
+
+
+X, Y = getImages()
 
 savedName = "Motion4_1"
-preprocessed_input = readImage(image6, show=False)
-# preprocessed_input = cv2.resize(preprocessed_input, (224, 224))
-preprocessed_input = np.reshape(preprocessed_input, (-1, 256, 256, 1))
-model = load_model('../../motionClassificationModel.h5')
-predictions = model.predict(preprocessed_input)
+index = 0
+for index in range(120, 181):
+    preprocessed_input = X[index]
+    # preprocessed_input = cv2.resize(preprocessed_input, (224, 224))
+    preprocessed_input = np.reshape(preprocessed_input, (-1, 256, 256, 1))
+    model = load_model('../../motionClassificationModel.h5')
+    predictions = model.predict(preprocessed_input)
 
-predicted_class = np.argmax(predictions)
-cam, heatmap = grad_cam(model, preprocessed_input, predicted_class, "conv2d_3")
-cv2.imwrite(savedName + ".jpg", cam)
+    predicted_class = np.argmax(predictions)
+    cam, heatmap = grad_cam(model, preprocessed_input, predicted_class, "conv2d_3")
+    fig = plt.figure()
+    ax1 = fig.add_subplot(1, 3, 1)
+    ax1.imshow(Y[index], cmap='gray')
+    ax2 = fig.add_subplot(1, 3, 2)
+    ax2.imshow(X[index], cmap='gray')
+    ax3 = fig.add_subplot(1, 3, 3)
+    ax3.imshow(cam)
+
+    fig.savefig('Image_{}.png'.format(index))
+# cv2.imwrite(savedName + ".jpg", cam)
 
 # register_gradient()
 # guided_model = modify_backprop(model, 'GuidedBackProp')

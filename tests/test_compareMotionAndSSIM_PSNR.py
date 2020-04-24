@@ -18,6 +18,7 @@ class TestCompareMotionWithSSIMPSNR(TestCase):
         Y = []
         rotationNorm = []
         displacementNorm = []
+        t1t2 = []
         for index, row in dataFrame.iterrows():
             if row[0] != 0 and row[1] != 0:
                 name = row[2]
@@ -31,9 +32,10 @@ class TestCompareMotionWithSSIMPSNR(TestCase):
                 Y.append(imageWithoutMotion)
                 rotationNorm.append(row[1])
                 displacementNorm.append(row[0])
-        return X, Y, displacementNorm, rotationNorm
+                t1t2.append(row[-1])
+        return X, Y, displacementNorm, rotationNorm, t1t2
 
-    def test_trainingGAN(self):
+    def test_ImageQuality(self):
         baseDir = "E:\Workspaces\PhillipsProject\Data\generated/"
         images = os.listdir(baseDir)
         dataFrame = pd.DataFrame(columns=["displacementNorm", "rotationNorm", "name", "number", "image"])
@@ -42,27 +44,53 @@ class TestCompareMotionWithSSIMPSNR(TestCase):
         imageMats = []
         displacementNormValues = []
         rotationNormValue = []
+        t1t2 = []
         for image in images:
-            imageMat = readImage(baseDir + image, show=False)
-            imageMat = imageMat - imageMat[0, 0]
-            cv2.normalize(imageMat, imageMat, 0, 255, cv2.NORM_MINMAX)
-            params = image.split("_")
-            displacementNorm = float(params[0])
-            rotationNorm = float(params[1])
-            displacementNormValues.append(displacementNorm)
-            rotationNormValue.append(rotationNorm)
-            names.append(params[2])
-            numbers.append(params[3])
-            imageMats.append(imageMat)
-            print("load image {}".format(image))
+            if image.__contains__("T1"):
+                try:
+                    imageMat = readImage(baseDir + image, show=False)
+                    imageMat = imageMat - imageMat[0, 0]
+                    cv2.normalize(imageMat, imageMat, 0, 255, cv2.NORM_MINMAX)
+                    params = image.split("_")
+                    displacementNorm = float(params[0])
+                    rotationNorm = float(params[1])
+                    displacementNormValues.append(displacementNorm)
+                    rotationNormValue.append(rotationNorm)
+                    names.append(params[2])
+                    numbers.append(params[3])
+                    imageMats.append(imageMat)
+                    print("load image {}".format(image))
+                    t1t2.append(1)
+                except:
+                    pass
+
+        for image in images:
+            if image.__contains__("T2"):
+                try:
+                    imageMat = readImage(baseDir + image, show=False)
+                    imageMat = imageMat - imageMat[0, 0]
+                    cv2.normalize(imageMat, imageMat, 0, 255, cv2.NORM_MINMAX)
+                    params = image.split("_")
+                    displacementNorm = float(params[0])
+                    rotationNorm = float(params[1])
+                    displacementNormValues.append(displacementNorm)
+                    rotationNormValue.append(rotationNorm)
+                    names.append(params[2])
+                    numbers.append(params[3])
+                    imageMats.append(imageMat)
+                    t1t2.append(2)
+                    print("load image {}".format(image))
+                except:
+                    pass
         dataFrame['displacementNorm'] = displacementNormValues
         dataFrame['rotationNorm'] = rotationNormValue
         dataFrame['name'] = names
         dataFrame['number'] = numbers
         dataFrame['image'] = imageMats
+        dataFrame['T1T2'] = t1t2
 
-        X, Y, displacementNorm, rotationNorm = self.createPairImages(dataFrame)
-        information = pd.DataFrame(columns=["RMS of rotation", "RMS of displacement", "SSIM", "PSNR"])
+        X, Y, displacementNorm, rotationNorm, t1t2 = self.createPairImages(dataFrame)
+        information = pd.DataFrame(columns=["RMS of rotation", "RMS of displacement", "SSIM", "PSNR", "T1T2"])
         ssimValues = []
         psnrValues = []
         for index, image in enumerate(X):
@@ -74,7 +102,8 @@ class TestCompareMotionWithSSIMPSNR(TestCase):
         information["SSIM"] = np.asarray(ssimValues, dtype=float)
         information["PSNR"] = np.asarray(psnrValues, dtype=float)
         information["|Motion|"] = np.sqrt(np.power(np.asarray(rotationNorm), 2) + np.power(np.asarray(displacementNorm), 2))
+        information["T1T2"] = np.asarray(t1t2, dtype=float)
         DA = DataAnalysisUtils()
         # DA.plotCorrelationHeatMap(information)
-        DA.plotScatterAllFeatures(information)
+        DA.plotPairAllFeatureByHue(information, "T1T2")
         pass

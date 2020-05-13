@@ -1,10 +1,11 @@
 import matplotlib.pyplot as plt
 from keras import metrics, losses
+from keras.callbacks import ReduceLROnPlateau
 from keras.layers import Dense, Conv2D, Activation, MaxPooling2D, Flatten, Dropout
 from keras.models import Sequential
 
 
-def CNNTrain(DataLoaderTrain, DataLoaderTest, num_classes, show=False):
+def CNNTrain(DataLoaderTrain, DataLoaderTest, DataLoaderValidation, num_classes, show=False):
     input_shape = (256, 256, 1)
     model = Sequential()
 
@@ -26,13 +27,16 @@ def CNNTrain(DataLoaderTrain, DataLoaderTest, num_classes, show=False):
     model.add(Dropout(0.2))
     model.add(Dense(num_classes))
     model.add(Activation('softmax'))
-    model.compile(loss=losses.categorical_crossentropy, optimizer='adam',
+    model.compile(loss=losses.categorical_crossentropy, optimizer='nadam',
                   metrics=[metrics.Recall()])
     print(model.summary())
     epochs = 50
+    reduce_lr_acc = ReduceLROnPlateau(monitor='val_loss', factor=0.9, patience=epochs / 10, verbose=1, min_delta=1e-4, mode='max')
 
     history = model.fit(DataLoaderTrain,
-                        epochs=epochs, validation_data=DataLoaderTest)
+                        epochs=epochs, validation_data=DataLoaderValidation, callbacks=[reduce_lr_acc])
+    scores = model.evaluate_generator(DataLoaderTest)
+    print("Accuracy = ", scores[1])
 
     if show:
         print(history.history.keys())

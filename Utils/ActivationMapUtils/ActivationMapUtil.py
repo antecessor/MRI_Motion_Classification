@@ -119,7 +119,9 @@ def grad_cam(input_model, image, category_index, layer_name):
     image = np.minimum(image, 255)
 
     cam = cv2.applyColorMap(np.uint8(255 * heatmap), cv2.COLORMAP_VIRIDIS)
+
     cam = np.float32(cam) + np.float32(image)
+
     cam = 255 * cam / np.max(cam)
     return np.uint8(cam), heatmap
 
@@ -141,7 +143,7 @@ def createPairImages(dataFrame):
     return X, Y
 
 
-def getImages():
+def getImagesT1OrT2(imageType="T1"):
     baseDir = "E:\Workspaces\PhillipsProject\Data\generated/"
     images = os.listdir(baseDir)
     dataFrame = pd.DataFrame(columns=["motionNorm", "name", "number", "image"])
@@ -150,7 +152,7 @@ def getImages():
     numbers = []
     imageMats = []
     for image in images:
-        if str(image).__contains__(".tiff") and str(image).__contains__("T1"):
+        if str(image).__contains__(".tiff") and str(image).__contains__(imageType):
             imageMat = readImage(baseDir + image, show=False)
 
             params = image.split("_")
@@ -170,33 +172,85 @@ def getImages():
     return X, Y
 
 
-X, Y = getImages()
+def getImageIBSR():
+    baseDir = "E:\Workspaces\PhillipsProject\Data\generated/"
+    images = os.listdir(baseDir)
+    dataFrame = pd.DataFrame(columns=["motionNorm", "name", "number", "image"])
+    motionValue = []
+    names = []
+    numbers = []
+    imageMats = []
+    for image in images:
+        if str(image).__contains__(".jpg") and not str(image).__contains__("T1") and not str(image).__contains__("T2"):
+            imageMat = readImage(baseDir + image, show=False)
+            imageMats.append(imageMat)
+    return imageMats
 
-savedName = "Motion4_1"
-index = 0
-for index in range(120, 181):
-    preprocessed_input = X[index]
-    # preprocessed_input = cv2.resize(preprocessed_input, (224, 224))
-    preprocessed_input = np.reshape(preprocessed_input, (-1, 256, 256, 1))
-    model = load_model('../../motionClassificationModel.h5')
-    predictions = model.predict(preprocessed_input)
 
-    predicted_class = np.argmax(predictions)
-    cam, heatmap = grad_cam(model, preprocessed_input, predicted_class, "conv2d_3")
-    fig = plt.figure()
-    ax1 = fig.add_subplot(1, 3, 1)
-    ax1.imshow(Y[index], cmap='gray')
-    ax2 = fig.add_subplot(1, 3, 2)
-    ax2.imshow(X[index], cmap='gray')
-    ax3 = fig.add_subplot(1, 3, 3)
-    ax3.imshow(cam)
+def createGradCAMOnIBSR():
+    X1 = getImageIBSR()
+    X, Y = getImagesT1OrT2()
+    for index in range(30):
+        kernel = np.ones((5, 5), np.float32) / 25
+        preprocessed_input1 = cv2.filter2D(X1[index], -1, kernel)
+        # preprocessed_input = cv2.resize(preprocessed_input, (224, 224))
+        preprocessed_input1 = np.reshape(preprocessed_input1, (-1, 256, 256, 1))
+        preprocessed_input = np.reshape(X[index], (-1, 256, 256, 1))
+        model = load_model('../../motionClassificationModel.h5')
+        predictions = model.predict(preprocessed_input)
 
-    fig.savefig('Image_{}.png'.format(index))
-# cv2.imwrite(savedName + ".jpg", cam)
+        predicted_class = np.argmax(predictions)
+        cam, heatmap = grad_cam(model, preprocessed_input, predicted_class, "conv2d_3", preprocessed_input1)
+        fig = plt.figure()
+        ax1 = fig.add_subplot(1, 3, 1)
+        ax1.imshow(X1[index], cmap='gray')
+        ax2 = fig.add_subplot(1, 3, 2)
+        ax2.imshow(preprocessed_input1[0, :, :, 0], cmap='gray')
+        ax3 = fig.add_subplot(1, 3, 3)
+        ax3.imshow(cam)
 
-# register_gradient()
-# guided_model = modify_backprop(model, 'GuidedBackProp')
-# saliency_fn = compile_saliency_function(guided_model, "activation_3")
-# saliency = saliency_fn([preprocessed_input, 0])
-# gradcam = saliency[0] * heatmap[..., np.newaxis]
-# cv2.imwrite("guided_gradcam2.jpg", deprocess_image(gradcam))
+        fig.savefig('Image_{}.png'.format(index))
+    # cv2.imwrite(savedName + ".jpg", cam)
+
+    # register_gradient()
+    # guided_model = modify_backprop(model, 'GuidedBackProp')
+    # saliency_fn = compile_saliency_function(guided_model, "activation_3")
+    # saliency = saliency_fn([preprocessed_input, 0])
+    # gradcam = saliency[0] * heatmap[..., np.newaxis]
+    # cv2.imwrite("guided_gradcam2.jpg", deprocess_image(gradcam))
+
+
+def createGradCAMOnT1OrT2():
+    X, Y = getImagesT1OrT2()
+
+    savedName = "Motion4_1"
+    index = 0
+    for index in range(120, 181):
+        preprocessed_input = X[index]
+        # preprocessed_input = cv2.resize(preprocessed_input, (224, 224))
+        preprocessed_input = np.reshape(preprocessed_input, (-1, 256, 256, 1))
+        model = load_model('../../motionClassificationModel.h5')
+        predictions = model.predict(preprocessed_input)
+
+        predicted_class = np.argmax(predictions)
+        cam, heatmap = grad_cam(model, preprocessed_input, predicted_class, "conv2d_3")
+        fig = plt.figure()
+        ax1 = fig.add_subplot(1, 3, 1)
+        ax1.imshow(Y[index], cmap='gray')
+        ax2 = fig.add_subplot(1, 3, 2)
+        ax2.imshow(X[index], cmap='gray')
+        ax3 = fig.add_subplot(1, 3, 3)
+        ax3.imshow(cam)
+
+        fig.savefig('Image_{}.png'.format(index))
+    # cv2.imwrite(savedName + ".jpg", cam)
+
+    # register_gradient()
+    # guided_model = modify_backprop(model, 'GuidedBackProp')
+    # saliency_fn = compile_saliency_function(guided_model, "activation_3")
+    # saliency = saliency_fn([preprocessed_input, 0])
+    # gradcam = saliency[0] * heatmap[..., np.newaxis]
+    # cv2.imwrite("guided_gradcam2.jpg", deprocess_image(gradcam))
+
+
+createGradCAMOnIBSR()

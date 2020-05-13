@@ -18,23 +18,26 @@ class Dataset:
 
     """
 
-    def __init__(self, train=True, augmentation=None, preprocessing=None, test_size=.2, random_state=42):
+    def __init__(self, train="train", augmentation=None, preprocessing=None, test_size=.3):
         # convert str names to class values on masks
         self.train = train
         labels = np.zeros((1, wholeIndex[-1]), dtype=int)[0]
         for i in range(len(wholeIndex) - 1):
             labels[[range(wholeIndex[i], wholeIndex[i + 1])]] = int(i)
-        self.train_filter, self.test_filter, _, _ = train_test_split(list(range(wholeIndex[-1])), labels, test_size=test_size, stratify=labels, shuffle=True, random_state=random_state)
-
+        self.train_filter, self.test_filter, _, _ = train_test_split(list(range(wholeIndex[-1])), labels, test_size=test_size, stratify=labels, shuffle=True)
+        _, _, self.validation_filter, self.test_filter = train_test_split(list(range(len(self.test_filter))), self.test_filter, test_size=.33)
         self.augmentation = augmentation
         self.preprocessing = preprocessing
 
     def __getitem__(self, i):
         # read data
-        if self.train:
+        if self.train.__contains__("train"):
             image, label = getImageAndClasses(self.train_filter[i])
-        else:
+        elif self.train.__contains__("test"):
             image, label = getImageAndClasses(self.test_filter[i])
+        elif self.train.__contains__("validation"):
+            ind = np.random.random_integers(0, len(self.validation_filter) - 1, 1)[0]
+            image, label = getImageAndClasses(self.validation_filter[ind])
         # image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
         # apply augmentations

@@ -8,5 +8,8 @@ The generated motion is slice-dependent. In other words, for each slice it rotat
 
 For training the model fix directory in DataGenerator.py
 
+## Reference
+Mohebbian, M., Walia, E., Habibullah, M., Stapleton, S. and Wahid, K.A., 2021. Classifying MRI motion severity using a stacked ensemble approach. Magnetic Resonance Imaging, 75, pp.107-115.
+
 
 
